@@ -75,6 +75,14 @@ def free_mode() -> bool:
     return _is_set(KEY_ENV) and free_only
 
 
+DAILY_LIMIT_MARKER = "free-models-per-day"
+_daily_limit_reached = False
+
+
+class DailyLimitReached(RuntimeError):
+    """OpenRouter's free daily limit is used up; no further calls this run."""
+
+
 class RotatingLlm(GeneralLlm):
     """
     A GeneralLlm that spreads calls over a pool of models (round robin) and
@@ -100,6 +108,9 @@ class RotatingLlm(GeneralLlm):
         return data
 
     async def invoke(self, prompt, system_prompt: str | None = None) -> str:
+        global _daily_limit_reached
+        if _daily_limit_reached:
+            raise DailyLimitReached("Free daily limit reached earlier in this run")
         start = self._next_index
         self._next_index += 1
         last_error: Exception | None = None
@@ -109,6 +120,13 @@ class RotatingLlm(GeneralLlm):
                 return await llm.invoke(prompt, system_prompt)
             except Exception as error:  # noqa: BLE001 - any failure moves on
                 last_error = error
+                if DAILY_LIMIT_MARKER in str(error):
+                    # Every further call would fail and still hit the API.
+                    _daily_limit_reached = True
+                    raise DailyLimitReached(
+                        "OpenRouter free daily limit reached; the remaining "
+                        "questions are picked up by a later run"
+                    ) from error
                 logger.warning(
                     f"Model {llm.model} failed ({type(error).__name__}: "
                     f"{str(error)[:200]}); trying the next model in the pool"
