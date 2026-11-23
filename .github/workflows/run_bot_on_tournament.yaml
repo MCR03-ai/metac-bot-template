@@ -5,11 +5,6 @@ on:
   schedule:
     - cron: "7,27,47 * * * *" # every 20 min, offset off the hour. Make sure to skip already-forecasted questions!
 
-# models: read lets the built-in GITHUB_TOKEN call GitHub Models (free, rate limited)
-permissions:
-  contents: read
-  models: read
-
 # Add concurrency group to prevent parallel runs
 concurrency:
   group: ${{ github.workflow }}
@@ -39,7 +34,7 @@ jobs:
         # this reads the environment variables from the github repository.
         # Store under Settings --> Secrets and variables --> Actions
         env:
-          GITHUB_MODELS_TOKEN: ${{ secrets.GITHUB_TOKEN }} # used only when no paid LLM key is set
+          OPENROUTER_FREE_ONLY: ${{ vars.OPENROUTER_FREE_ONLY }} # unset = only free models are ever called
           METACULUS_TOKEN: ${{ secrets.METACULUS_TOKEN }} # replace this with the name of the variable under which you stored your own Metaculus token
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}

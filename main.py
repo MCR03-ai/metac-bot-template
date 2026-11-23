@@ -44,9 +44,11 @@ from forecasting_tools import (
 
 from free_models import (
     build_free_llms,
+    TEST_QUESTION_LIMIT,
     fetch_news,
     free_mode,
     predictions_per_question,
+    probability_from_text,
 )
 
 dotenv.load_dotenv()
@@ -253,6 +255,18 @@ class FallTemplateBot2026(ForecastBot):
     ) -> ReasonedPrediction[float]:
         reasoning = await self.get_llm("default", "llm").invoke(prompt)
         logger.info(f"Reasoning for URL {question.page_url}: {reasoning}")
+        if free_mode():
+            # Zero-cost mode: read the final "Probability: ZZ%" line directly and
+            # only fall back to the parser model when it is missing.
+            direct_probability = probability_from_text(reasoning)
+            if direct_probability is not None:
+                decimal_pred = max(0.01, min(0.99, direct_probability))
+                logger.info(
+                    f"Forecasted URL {question.page_url} with prediction: {decimal_pred}."
+                )
+                return ReasonedPrediction(
+                    prediction_value=decimal_pred, reasoning=reasoning
+                )
         parsing_instructions = clean_indents(
             f"""
             The text given to you is trying to give a probability forecast for a binary question.
@@ -723,9 +737,9 @@ if __name__ == "__main__":
     # Configure the bot. The `llms=` block below is commented out to use
     # whichever default models forecasting-tools picks based on your env vars;
     # uncomment and edit to pin specific models.
-    # Zero-cost mode (no paid LLM key set): a small ensemble of free GitHub
-    # Models, one forecast per model, and a single parsing pass to stay
-    # inside the free daily limits. With a paid key the template defaults apply.
+    # Zero-cost mode (default in this fork): free OpenRouter models only, one
+    # forecast per model and as few parsing calls as possible, to stay inside
+    # the free daily limit. See free_models.py for how to switch it off.
     use_free_models = free_mode()
     if use_free_models:
         FallTemplateBot2026._structure_output_validation_samples = 1
@@ -794,13 +808,37 @@ if __name__ == "__main__":
         # the recommended target for smoke-testing your bot.
         # https://www.metaculus.com/tournament/bot-testing-area/
         template_bot.skip_previously_forecasted_questions = False
-        forecast_reports = asyncio.run(
-            template_bot.forecast_on_tournament(
-                "bot-testing-area", return_exceptions=True
+        if use_free_models:
+            # A full pass over the testing area would use up the free daily
+            # limit, so a smoke test covers a few questions of different types.
+            test_questions = client.get_all_open_questions_from_tournament(
+                "bot-testing-area"
             )
-        )
+            by_type: dict[type, MetaculusQuestion] = {}
+            for test_question in test_questions:
+                by_type.setdefault(type(test_question), test_question)
+            ordered_types = [BinaryQuestion, MultipleChoiceQuestion, NumericQuestion]
+            picked = [by_type[t] for t in ordered_types if t in by_type]
+            forecast_reports = asyncio.run(
+                template_bot.forecast_questions(
+                    picked[:TEST_QUESTION_LIMIT], return_exceptions=True
+                )
+            )
+        else:
+            forecast_reports = asyncio.run(
+                template_bot.forecast_on_tournament(
+                    "bot-testing-area", return_exceptions=True
+                )
+            )
 
-    template_bot.log_report_summary(forecast_reports)
+    try:
+        template_bot.log_report_summary(forecast_reports)
+    except RuntimeError as summary_error:
+        if not use_free_models:
+            raise
+        # In zero-cost mode a used-up daily limit is expected now and then; the
+        # questions are simply picked up again by a later run.
+        print(f"Some questions were not forecast in this run: {str(summary_error)[:1500]}")
     print_run_summary_banner(
         forecast_reports,
         will_publish=publish_to_metaculus,

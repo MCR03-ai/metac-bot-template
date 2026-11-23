@@ -1,21 +1,22 @@
 """
 Zero-cost mode for the bot.
 
-When no paid LLM key (OpenRouter / OpenAI / Anthropic) is configured, the bot
-runs on GitHub Models, the rate-limited free inference endpoint that every
-GitHub account gets, authenticated with the GITHUB_TOKEN of the Actions run
-(workflow permission `models: read`). Nothing is billed unless paid usage is
-switched on in the GitHub account, which this project never does.
+When OPENROUTER_FREE_ONLY is not set to "false", the bot only ever calls
+OpenRouter models whose id ends in ":free". Those cost nothing, need no
+credits on the account, and are rate limited by OpenRouter (a small number
+of requests per day), so this module is built to spend very few calls:
 
-Two pieces live here:
-
-1. build_free_llms(): picks a small ensemble of different forecasting models
-   plus a cheap parser model from the live model catalog. Free limits are
-   per model and per day, so spreading the calls over several models both
-   diversifies the forecast and multiplies the daily budget.
+1. build_free_llms(): picks two different free models from OpenRouter's live
+   public model list and rotates between them (falling through to the other
+   one when a model is unavailable).
 2. fetch_news(): a key-less research step. It reads recent headlines from the
    Google News RSS search feed so the forecasters see dated, current
    information instead of relying on training data alone.
+3. probability_from_text(): reads the final "Probability: ZZ%" line of a
+   binary forecast directly, so no extra parsing call is needed.
+
+Set the repository variable OPENROUTER_FREE_ONLY to "false" to go back to
+the template's paid default models (e.g. once donated credits are on the key).
 """
 
 from __future__ import annotations
@@ -35,33 +36,28 @@ from forecasting_tools import GeneralLlm
 
 logger = logging.getLogger(__name__)
 
-GITHUB_MODELS_BASE_URL = "https://models.github.ai/inference"
-GITHUB_MODELS_CATALOG_URL = "https://models.github.ai/catalog/models"
-TOKEN_ENV = "GITHUB_MODELS_TOKEN"
-PAID_KEY_ENVS = ("OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")
+OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
+KEY_ENV = "OPENROUTER_API_KEY"
+FREE_ONLY_ENV = "OPENROUTER_FREE_ONLY"
 
-# Ordered preferences, matched against catalog ids (case-insensitive). At most
-# one model per line is taken, so the ensemble mixes model families.
+# Ordered preferences, matched against free model ids (case-insensitive). One
+# model per line at most, so the pool mixes model families.
 FORECASTER_PREFERENCES = [
-    r"^openai/gpt-4\.1$",
-    r"deepseek-v3",
-    r"^xai/grok-3$",
-    r"^openai/gpt-4o$",
-    r"llama-4-maverick|llama-3\.3-70b",
-    r"mistral-(large|medium)",
-    r"^microsoft/phi-4$",
+    r"deepseek",
+    r"gpt-oss-120b",
+    r"llama-(4|3\.3-70b)",
+    r"qwen",
+    r"gemini|gemma-3-27b",
+    r"mistral",
+    r"glm|kimi|grok|gpt-oss",
 ]
-PARSER_PREFERENCES = [
-    r"^openai/gpt-4\.1-mini$",
-    r"^openai/gpt-4o-mini$",
-    r"^openai/gpt-4\.1-nano$",
-    r"mistral-small",
-    r"^microsoft/phi-4-mini",
+STATIC_FORECASTERS = [
+    "deepseek/deepseek-chat-v3-0324:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
 ]
-STATIC_FORECASTERS = ["openai/gpt-4.1", "openai/gpt-4o"]
-STATIC_PARSERS = ["openai/gpt-4.1-mini", "openai/gpt-4o-mini"]
-NUM_FORECASTERS = 3
-NUM_PARSERS = 2
+NUM_FORECASTERS = 2
+MIN_CONTEXT_TOKENS = 32000
+TEST_QUESTION_LIMIT = 3
 
 
 def _is_set(name: str) -> bool:
@@ -70,8 +66,9 @@ def _is_set(name: str) -> bool:
 
 
 def free_mode() -> bool:
-    """True when the run should use GitHub Models instead of a paid key."""
-    return _is_set(TOKEN_ENV) and not any(_is_set(k) for k in PAID_KEY_ENVS)
+    """True unless paid models were explicitly allowed for this repository."""
+    free_only = (os.getenv(FREE_ONLY_ENV) or "").strip().lower() != "false"
+    return _is_set(KEY_ENV) and free_only
 
 
 class RotatingLlm(GeneralLlm):
@@ -89,8 +86,6 @@ class RotatingLlm(GeneralLlm):
             temperature=first.litellm_kwargs.get("temperature"),
             timeout=first.litellm_kwargs.get("timeout"),
             allowed_tries=1,
-            base_url=first.litellm_kwargs.get("base_url"),
-            api_key=first.litellm_kwargs.get("api_key"),
         )
         self._pool = pool
         self._next_index = 0
@@ -118,43 +113,27 @@ class RotatingLlm(GeneralLlm):
         raise last_error
 
 
-def _fetch_catalog(token: str) -> list[dict]:
+def _fetch_free_models() -> list[str]:
     request = urllib.request.Request(
-        GITHUB_MODELS_CATALOG_URL,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/vnd.github+json",
-            "User-Agent": "metac-bot-free-mode",
-        },
+        OPENROUTER_MODELS_URL, headers={"User-Agent": "metac-bot-free-mode"}
     )
     with urllib.request.urlopen(request, timeout=20) as response:
         data = json.loads(response.read().decode("utf-8"))
-    return data if isinstance(data, list) else []
+    free: list[str] = []
+    for entry in data.get("data", []):
+        model_id = str(entry.get("id", ""))
+        outputs = (entry.get("architecture") or {}).get("output_modalities") or ["text"]
+        context = entry.get("context_length") or 0
+        if (
+            model_id.endswith(":free")
+            and "text" in outputs
+            and context >= MIN_CONTEXT_TOKENS
+        ):
+            free.append(model_id)
+    return free
 
 
-def _is_text_chat_model(entry: dict) -> bool:
-    model_id = str(entry.get("id", "")).lower()
-    tier = str(entry.get("rate_limit_tier", "")).lower()
-    outputs = [str(m).lower() for m in entry.get("supported_output_modalities") or []]
-    if not model_id or "embed" in model_id or tier == "embeddings":
-        return False
-    return not outputs or "text" in outputs
-
-
-def _pick(
-    catalog: list[dict],
-    preferences: list[str],
-    count: int,
-    tiers: tuple[str, ...],
-    exclude: set[str],
-) -> list[str]:
-    usable = [
-        str(e["id"])
-        for e in catalog
-        if _is_text_chat_model(e)
-        and str(e.get("rate_limit_tier", "")).lower() in tiers
-        and str(e["id"]) not in exclude
-    ]
+def _pick(usable: list[str], preferences: list[str], count: int) -> list[str]:
     chosen: list[str] = []
     for pattern in preferences:
         if len(chosen) >= count:
@@ -165,15 +144,6 @@ def _pick(
         )
         if match:
             chosen.append(match)
-    # Top up with other models of the wanted tiers, one per publisher first.
-    seen_publishers = {m.split("/")[0] for m in chosen}
-    for model_id in usable:
-        if len(chosen) >= count:
-            break
-        publisher = model_id.split("/")[0]
-        if model_id not in chosen and publisher not in seen_publishers:
-            chosen.append(model_id)
-            seen_publishers.add(publisher)
     for model_id in usable:
         if len(chosen) >= count:
             break
@@ -182,55 +152,30 @@ def _pick(
     return chosen
 
 
-def _github_llm(model_id: str, token: str, temperature: float) -> GeneralLlm:
-    # GitHub Models speaks the OpenAI chat-completions protocol, so litellm's
-    # generic "openai/" provider is pointed at it with a custom base URL.
+def _free_llm(model_id: str, temperature: float) -> GeneralLlm:
+    assert model_id.endswith(":free"), f"{model_id} is not a free model"
     return GeneralLlm(
-        model=f"openai/{model_id}",
+        model=f"openrouter/{model_id}",
         temperature=temperature,
-        timeout=90,
-        allowed_tries=2,
-        base_url=GITHUB_MODELS_BASE_URL,
-        api_key=token,
+        timeout=120,
+        allowed_tries=1,  # failed calls count against the daily free limit
     )
 
 
 def build_free_llms() -> dict[str, GeneralLlm | str]:
-    """The `llms` dict for the bot when running on GitHub Models."""
-    token = os.environ[TOKEN_ENV]
+    """The `llms` dict for the bot when running on free OpenRouter models."""
     try:
-        catalog = _fetch_catalog(token)
-        print("GitHub Models catalog (id | tier | max input | max output):")
-        for entry in catalog:
-            limits = entry.get("limits") or {}
-            print(
-                f"    {entry.get('id')} | {entry.get('rate_limit_tier')} | "
-                f"{limits.get('max_input_tokens')} | {limits.get('max_output_tokens')}"
-            )
+        free_models = _fetch_free_models()
+        print(f"Free OpenRouter models right now: {free_models}")
     except Exception as error:  # noqa: BLE001
-        print(f"Could not read the GitHub Models catalog ({error}); using defaults")
-        catalog = []
-
-    forecasters = _pick(
-        catalog, FORECASTER_PREFERENCES, NUM_FORECASTERS, ("high",), set()
-    )
-    if len(forecasters) < NUM_FORECASTERS:
-        forecasters += _pick(
-            catalog,
-            FORECASTER_PREFERENCES,
-            NUM_FORECASTERS - len(forecasters),
-            ("low",),
-            set(forecasters),
-        )
+        print(f"Could not read the OpenRouter model list ({error}); using defaults")
+        free_models = []
+    forecasters = _pick(free_models, FORECASTER_PREFERENCES, NUM_FORECASTERS)
     if not forecasters:
         forecasters = STATIC_FORECASTERS
-    parsers = _pick(catalog, PARSER_PREFERENCES, NUM_PARSERS, ("low",), set(forecasters))
-    if not parsers:
-        parsers = STATIC_PARSERS
-
-    print(f"Free mode. Forecasting models: {forecasters}. Parser models: {parsers}.")
-    forecaster = RotatingLlm([_github_llm(m, token, 0.3) for m in forecasters])
-    parser = RotatingLlm([_github_llm(m, token, 0.0) for m in parsers])
+    print(f"Free mode. Models in rotation: {forecasters}.")
+    forecaster = RotatingLlm([_free_llm(m, 0.3) for m in forecasters])
+    parser = RotatingLlm([_free_llm(m, 0.0) for m in reversed(forecasters)])
     return {
         "default": forecaster,
         "summarizer": parser,
@@ -241,6 +186,22 @@ def build_free_llms() -> dict[str, GeneralLlm | str]:
 
 def predictions_per_question() -> int:
     return NUM_FORECASTERS
+
+
+def probability_from_text(reasoning: str) -> float | None:
+    """
+    The decimal probability from the last "Probability: ZZ%" line of a binary
+    forecast, or None when the text has no unambiguous one.
+    """
+    matches = re.findall(
+        r"probability\s*[:=]\s*\**\s*(\d{1,3}(?:\.\d+)?)\s*%", reasoning, flags=re.I
+    )
+    if not matches:
+        return None
+    value = float(matches[-1])
+    if not 0 <= value <= 100:
+        return None
+    return value / 100
 
 
 # ----------------------------------------------------------------- research
