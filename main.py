@@ -45,8 +45,11 @@ from forecasting_tools import (
 from free_models import (
     build_free_llms,
     TEST_QUESTION_LIMIT,
+    build_paid_llms,
     fetch_news,
     free_mode,
+    paid_mode,
+    web_research,
     predictions_per_question,
     probability_from_text,
 )
@@ -142,6 +145,15 @@ class FallTemplateBot2026(ForecastBot):
         async with self._concurrency_limiter:
             research = ""
             researcher = self.get_llm("researcher")
+
+            if paid_mode():
+                research = await web_research(
+                    question.question_text, question.resolution_criteria or ""
+                )
+                logger.info(
+                    f"Found Research for URL {question.page_url}:\n{research}"
+                )
+                return research
 
             if free_mode():
                 # Zero-cost mode: dated headlines from a key-less news feed.
@@ -255,8 +267,8 @@ class FallTemplateBot2026(ForecastBot):
     ) -> ReasonedPrediction[float]:
         reasoning = await self.get_llm("default", "llm").invoke(prompt)
         logger.info(f"Reasoning for URL {question.page_url}: {reasoning}")
-        if free_mode():
-            # Zero-cost mode: read the final "Probability: ZZ%" line directly and
+        if free_mode() or paid_mode():
+            # Read the final "Probability: ZZ%" line directly and
             # only fall back to the parser model when it is missing.
             direct_probability = probability_from_text(reasoning)
             if direct_probability is not None:
@@ -741,14 +753,19 @@ if __name__ == "__main__":
     # forecast per model and as few parsing calls as possible, to stay inside
     # the free daily limit. See free_models.py for how to switch it off.
     use_free_models = free_mode()
-    if use_free_models:
+    use_paid_models = paid_mode()
+    if use_free_models or use_paid_models:
         FallTemplateBot2026._structure_output_validation_samples = 1
     template_bot = FallTemplateBot2026(
         research_reports_per_question=1,
         predictions_per_research_report=(
-            predictions_per_question() if use_free_models else 5
+            predictions_per_question() if (use_free_models or use_paid_models) else 5
         ),
-        llms=build_free_llms() if use_free_models else None,
+        llms=(
+            build_free_llms()
+            if use_free_models
+            else build_paid_llms() if use_paid_models else None
+        ),
         use_research_summary_to_forecast=False,
         publish_reports_to_metaculus=publish_to_metaculus,
         folder_to_save_reports_to=None,
@@ -808,7 +825,7 @@ if __name__ == "__main__":
         # the recommended target for smoke-testing your bot.
         # https://www.metaculus.com/tournament/bot-testing-area/
         template_bot.skip_previously_forecasted_questions = False
-        if use_free_models:
+        if use_free_models or use_paid_models:
             # A full pass over the testing area would use up the free daily
             # limit, so a smoke test covers a few questions of different types.
             test_questions = client.get_all_open_questions_from_tournament(

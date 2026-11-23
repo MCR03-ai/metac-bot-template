@@ -34,7 +34,7 @@ jobs:
         # this reads the environment variables from the github repository.
         # Store under Settings --> Secrets and variables --> Actions
         env:
-          OPENROUTER_FREE_ONLY: ${{ vars.OPENROUTER_FREE_ONLY }} # unset = only free models are ever called
+          OPENROUTER_FREE_ONLY: "false" # paid mid-priced models (see free_models.py); set to "true" for free models only
           METACULUS_TOKEN: ${{ secrets.METACULUS_TOKEN }} # replace this with the name of the variable under which you stored your own Metaculus token
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}

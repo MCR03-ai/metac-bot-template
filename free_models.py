@@ -64,6 +64,18 @@ MIN_CONTEXT_TOKENS = 32000
 TEST_QUESTION_LIMIT = 3
 
 
+# Paid mode (OPENROUTER_FREE_ONLY=false): fixed, mid-priced models so the cost
+# per question stays predictable (roughly 4-6 US cents at Nov 2026 prices).
+PAID_FORECASTERS = [
+    "openai/gpt-6.1-terra",
+    "google/gemini-4-hydrogen",
+    "anthropic/claude-sonnet-5.5",
+]
+PAID_PARSER = "anthropic/claude-haiku-5.5"
+PAID_RESEARCHER = "perplexity/sonar"  # searches the web itself
+PAID_MAX_OUTPUT_TOKENS = 2500
+
+
 def _is_set(name: str) -> bool:
     value = (os.getenv(name) or "").strip()
     return bool(value) and not value.lower().startswith(("your_", "replace", "xxx"))
@@ -81,6 +93,11 @@ _daily_limit_reached = False
 
 class DailyLimitReached(RuntimeError):
     """OpenRouter's free daily limit is used up; no further calls this run."""
+
+
+def paid_mode() -> bool:
+    """True when paid OpenRouter models were explicitly switched on."""
+    return _is_set(KEY_ENV) and not free_mode()
 
 
 class RotatingLlm(GeneralLlm):
@@ -206,8 +223,53 @@ def build_free_llms() -> dict[str, GeneralLlm | str]:
     }
 
 
+def _paid_llm(model_id: str) -> GeneralLlm:
+    return GeneralLlm(
+        model=f"openrouter/{model_id}",
+        temperature=None,  # several of these models reject a temperature
+        timeout=180,
+        allowed_tries=2,
+        max_tokens=PAID_MAX_OUTPUT_TOKENS,
+    )
+
+
+def build_paid_llms() -> dict[str, GeneralLlm | str]:
+    """The `llms` dict for the bot when paid OpenRouter models are allowed."""
+    print(
+        f"Paid mode. Forecasters: {PAID_FORECASTERS}. Parser: {PAID_PARSER}. "
+        f"Researcher: {PAID_RESEARCHER}."
+    )
+    parser = _paid_llm(PAID_PARSER)
+    return {
+        "default": RotatingLlm([_paid_llm(m) for m in PAID_FORECASTERS]),
+        "summarizer": parser,
+        "researcher": "no_research",  # research is done in web_research()
+        "parser": parser,
+    }
+
+
+async def web_research(question_text: str, resolution_criteria: str) -> str:
+    """A short, dated news rundown from a web-searching model plus headlines."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    prompt = (
+        "You are a research assistant to a professional forecaster. Today is "
+        f"{today}. Search the web and write a concise rundown (at most 350 words) "
+        "of the most relevant and most recent facts for the question below. Give "
+        "dates for every fact, say what the current status is, and say plainly "
+        "when you found nothing recent. Do not give a forecast.\n\n"
+        f"Question: {question_text}\n\nResolution criteria: {resolution_criteria}"
+    )
+    rundown = ""
+    try:
+        rundown = await _paid_llm(PAID_RESEARCHER).invoke(prompt)
+    except Exception as error:  # noqa: BLE001
+        logger.warning(f"Web research failed: {type(error).__name__}: {str(error)[:200]}")
+    headlines = await fetch_news(question_text, max_items=10)
+    return "\n\n".join(part for part in (rundown, headlines) if part)
+
+
 def predictions_per_question() -> int:
-    return NUM_FORECASTERS
+    return len(PAID_FORECASTERS) if paid_mode() else NUM_FORECASTERS
 
 
 def probability_from_text(reasoning: str) -> float | None:
