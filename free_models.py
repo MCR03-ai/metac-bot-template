@@ -43,19 +43,23 @@ FREE_ONLY_ENV = "OPENROUTER_FREE_ONLY"
 # Ordered preferences, matched against free model ids (case-insensitive). One
 # model per line at most, so the pool mixes model families.
 FORECASTER_PREFERENCES = [
+    r"nemotron-3-ultra",
+    r"gemma-4-31b",
+    r"nemotron-3\.5-super",
     r"deepseek",
     r"gpt-oss-120b",
     r"llama-(4|3\.3-70b)",
     r"qwen",
-    r"gemini|gemma-3-27b",
+    r"gemma",
     r"mistral",
-    r"glm|kimi|grok|gpt-oss",
+    r"ernie",
 ]
 STATIC_FORECASTERS = [
     "deepseek/deepseek-chat-v3-0324:free",
     "meta-llama/llama-3.3-70b-instruct:free",
 ]
-NUM_FORECASTERS = 2
+NUM_FORECASTERS = 2  # forecasts per question
+POOL_SIZE = 4  # free models are often throttled upstream, so keep spares
 MIN_CONTEXT_TOKENS = 32000
 TEST_QUESTION_LIMIT = 3
 
@@ -170,7 +174,7 @@ def build_free_llms() -> dict[str, GeneralLlm | str]:
     except Exception as error:  # noqa: BLE001
         print(f"Could not read the OpenRouter model list ({error}); using defaults")
         free_models = []
-    forecasters = _pick(free_models, FORECASTER_PREFERENCES, NUM_FORECASTERS)
+    forecasters = _pick(free_models, FORECASTER_PREFERENCES, POOL_SIZE)
     if not forecasters:
         forecasters = STATIC_FORECASTERS
     print(f"Free mode. Models in rotation: {forecasters}.")
@@ -268,7 +272,7 @@ def _collect_headlines(question_text: str, max_items: int, max_age_days: int) ->
     for query in search_queries(question_text):
         try:
             # Feed order is relevance; keep the best-ranked items per query.
-            for published, source, title in _read_feed(query, max_age_days)[:25]:
+            for published, source, title in _read_feed(query, max_age_days)[:10]:
                 key = re.sub(r"\W+", "", title.lower())[:80]
                 if published >= cutoff and key not in seen:
                     seen.add(key)
@@ -277,20 +281,19 @@ def _collect_headlines(question_text: str, max_items: int, max_age_days: int) ->
             logger.warning(f"News lookup failed for '{query}': {error}")
     if not collected:
         return ""
-    collected.sort(key=lambda entry: entry[0], reverse=True)
     lines = [
         f"- {published:%Y-%m-%d} | {source or 'unknown source'} | {title}"
         for published, source, title in collected[:max_items]
     ]
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     return (
-        f"Recent news headlines (retrieved {today}, newest first; headlines only, "
+        f"Recent news headlines (retrieved {today}, most relevant first; headlines only, "
         "so treat them as leads, not as verified facts):\n" + "\n".join(lines)
     )
 
 
 async def fetch_news(
-    question_text: str, max_items: int = 18, max_age_days: int = 45
+    question_text: str, max_items: int = 14, max_age_days: int = 45
 ) -> str:
     """Recent dated headlines for a question, or an empty string."""
     return await asyncio.to_thread(
