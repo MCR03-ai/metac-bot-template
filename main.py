@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -39,6 +40,13 @@ from forecasting_tools import (
     SmartSearcher,
     clean_indents,
     structure_output,
+)
+
+from free_models import (
+    build_free_llms,
+    fetch_news,
+    free_mode,
+    predictions_per_question,
 )
 
 dotenv.load_dotenv()
@@ -132,6 +140,14 @@ class FallTemplateBot2026(ForecastBot):
         async with self._concurrency_limiter:
             research = ""
             researcher = self.get_llm("researcher")
+
+            if free_mode():
+                # Zero-cost mode: dated headlines from a key-less news feed.
+                research = await fetch_news(question.question_text)
+                logger.info(
+                    f"Found Research for URL {question.page_url}:\n{research}"
+                )
+                return research
 
             prompt = self._get_research_prompt(question, researcher)
 
@@ -707,9 +723,18 @@ if __name__ == "__main__":
     # Configure the bot. The `llms=` block below is commented out to use
     # whichever default models forecasting-tools picks based on your env vars;
     # uncomment and edit to pin specific models.
+    # Zero-cost mode (no paid LLM key set): a small ensemble of free GitHub
+    # Models, one forecast per model, and a single parsing pass to stay
+    # inside the free daily limits. With a paid key the template defaults apply.
+    use_free_models = free_mode()
+    if use_free_models:
+        FallTemplateBot2026._structure_output_validation_samples = 1
     template_bot = FallTemplateBot2026(
         research_reports_per_question=1,
-        predictions_per_research_report=5,
+        predictions_per_research_report=(
+            predictions_per_question() if use_free_models else 5
+        ),
+        llms=build_free_llms() if use_free_models else None,
         use_research_summary_to_forecast=False,
         publish_reports_to_metaculus=publish_to_metaculus,
         folder_to_save_reports_to=None,
