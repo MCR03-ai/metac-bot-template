@@ -1,0 +1,23 @@
+Suchauftrag. Bitte gründlich im Web suchen und lange nachdenken, nicht aus dem Gedächtnis. Nimm dir Zeit und arbeite frei: Folge auch Spuren, die du selbst für vielversprechend hältst.
+
+Ziel: Wege finden, mit dem Finden und sauberen Melden von Software-Fehlern Geld zu verdienen. Gesucht sind vor allem Firmen oder Produkte, die für gemeldete Funktionsfehler, UI/UX-Fehler oder andere normale Bugs bezahlen (nicht nur für Sicherheitslücken).
+
+Was zählt (sei lieber großzügig als zu streng):
+- Bezahlung in Geld (PayPal, Überweisung, Stripe, USDT/USDC) ODER Gutscheine wie Amazon-Gutscheine ODER Krypto (USDC, USDT, aber auch andere Coins oder Token sind ausdrücklich in Ordnung). Auch Programme mit kleinen Beträgen sind interessant.
+- Funktions-, UI/UX- oder Textfehler werden belohnt. Grenzfälle trotzdem nennen und kurz sagen, was unklar ist.
+- Möglichst offen für alle, auch für Leute aus Deutschland ohne bezahltes Abo. Wenn ein kostenloses Konto nötig ist, ist das in Ordnung.
+- Möglichst aktuell laufend (Stand November 2026). Neue oder gerade angekündigte Aktionen sind besonders wertvoll, weil oft der erste Melder gewinnt.
+
+Wo suchen: normale Websuche, aber auch Foren und Ankündigungen (Reddit, Hacker News, Indie Hackers, Product Hunt, X/Twitter, Discord-Ankündigungen), Hilfe-Center (Intercom, Zendesk, Help Scout, GitBook, Notion), AGB und Nutzungsbedingungen kleiner Firmen, Bug-Bash- und Beta-Aktionen, Krypto-Testnetze mit UI/UX-Prämien. Suche auch auf Deutsch, Französisch, Spanisch, Portugiesisch und Niederländisch (z. B. "Fehler melden Belohnung", "Bug melden Prämie", "prime bug", "recompensa por errores", "beloning bug melden").
+
+Typ-Beispiele, die wir schon kennen und nutzen (bitte NICHT nochmal nennen): Enjyn, Too Lost, Omnisend Product Bugs & UX Bounty, Krios, Smackdab, WildFeed, Cyndra, KeyInventions, TsarChat, Kalshi, Topcoder, HackenProof, Tester Work, Beta Family, FirstUsers, BetaTesters, 72 Street, Visor, SnapDeploy, Xano, FarmRaise, Flux, WisherBag, TradingView, Qodo, WiKey, Binobi, Mural, Kagi, Akeyless, Scrap.io, Picky Assist, Binomo, VaultCraft, Xsolla, AURA, XXKK, Mushi Mushi, Pixelora, FlixSell, Protocall, TapQA, Kidpop, Remicals, Orkosi, QAProvider, BEAT, Winna, RapidSkins, Gift Club, Maigie. Keine Casinos oder Glücksspiel.
+
+Antworte als Liste, je Treffer:
+- Name
+- Direkter Link zur Seite mit den Regeln
+- Betrag je Fehler (oder Spanne) und Art der Belohnung
+- Wie gemeldet wird
+- Was unklar oder ein Haken ist
+- Datum der Seite oder der Ankündigung, falls erkennbar
+
+Zum Schluss, getrennt davon: bis zu 3 andere, leicht übersehene Wege, wie jemand, der sehr gut Software-Fehler findet und sauber berichtet, ohne Sicherheitstests online Geld verdienen kann (mit Link als Beleg).
