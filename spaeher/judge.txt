@@ -1,2 +1,13 @@
-Unten stehen alle Links, die verschiedene KIs genannt haben, mit dem echten Seitentext. Ordne sie ein, aber sortiere NICHTS aus: Jeder Link kommt in die Tabelle. Sei grosszuegig: Geld, PayPal, USDT/USDC und Amazon-Gutscheine zaehlen alle; auch kleine Betraege und Grenzfaelle sind interessant. Spalten: URL | Programm | Art der Belohnung + Betrag | werden Funktions-/UI-Fehler belohnt? | offen fuer Leute aus Deutschland? | laeuft noch? | Haken | kurzes Zitat aus dem Seitentext als Beleg. Wenn der Seitentext etwas nicht zeigt oder der Abruf fehlschlug, schreib 'unklar' statt zu raten. Sortierung: vielversprechendste zuerst.
+Unten stehen alle Links, die verschiedene KIs genannt haben, jeweils mit dem echten Seitentext (abgerufen von einem Server, Seiten mit viel JavaScript können leer wirken). Aufgabe: einordnen, NICHTS aussortieren.
+
+Regeln:
+- Fasse doppelte Links zum selben Programm in EINE Zeile zusammen.
+- Sei großzügig: Geld, PayPal, Gutscheine (Amazon und andere Gift Cards), USDT/USDC und andere Krypto-Token zählen alle. Kleine Beträge und Grenzfälle sind interessant.
+- Wenn der Seitentext etwas nicht zeigt oder der Abruf fehlschlug, schreib "unklar" statt zu raten. Erfinde nichts.
+- Zellen kurz halten (höchstens etwa 25 Wörter), damit die ganze Tabelle in die Antwort passt.
+
+Ausgabe:
+1. Zuerst "TOP 10": die zehn vielversprechendsten Programme für jemanden aus Deutschland, der normale Funktions-/UI-Fehler meldet (keine Sicherheitstests), je eine Zeile: Name, Link, Belohnung, warum.
+2. Danach die vollständige Tabelle mit den Spalten: URL | Programm | Belohnung + Betrag | Funktions-/UI-Fehler belohnt? | offen für DE? | läuft noch? | Haken | kurzes Zitat aus dem Seitentext.
+Sortierung: vielversprechendste zuerst.
 
