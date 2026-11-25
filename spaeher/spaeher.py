@@ -81,6 +81,13 @@ def frage(job):
     msg = (r.get("choices") or [{}])[0].get("message") or {}
     text = (msg.get("content") or "").strip()
     grund = (r.get("choices") or [{}])[0].get("finish_reason")
+    if "DSML" in text or "<\uff5c" in text:  # rohe Tool-Aufrufe statt Antwort (DeepSeek)
+      notiz += f" [nur Tool-Aufrufe bei {effort}]"
+      text = ""
+    quellen = r.get("citations") or [a.get("url_citation", {}).get("url") for a in (msg.get("annotations") or []) if isinstance(a, dict)]
+    quellen = [q for q in quellen if q]
+    if text and quellen:
+      text += "\n\nQuellen:\n" + "\n".join(f"[{i + 1}] {q}" for i, q in enumerate(quellen))
     if text:
       if grund == "length":
         notiz += " [Achtung: bei Laengengrenze abgeschnitten]"
