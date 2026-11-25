@@ -1,23 +1,24 @@
-Suchauftrag. Bitte gründlich im Web suchen und lange nachdenken, nicht aus dem Gedächtnis. Nimm dir Zeit und arbeite frei: Folge auch Spuren, die du selbst für vielversprechend hältst.
+Suchauftrag. Bitte gründlich im Web suchen, mehrere verschiedene Suchanfragen stellen und lange nachdenken, nicht aus dem Gedächtnis antworten. Arbeite frei und folge Spuren, die du selbst vielversprechend findest.
 
-Ziel: Wege finden, mit dem Finden und sauberen Melden von Software-Fehlern Geld zu verdienen. Gesucht sind vor allem Firmen oder Produkte, die für gemeldete Funktionsfehler, UI/UX-Fehler oder andere normale Bugs bezahlen (nicht nur für Sicherheitslücken).
+Wer sucht: Ein Tester aus Deutschland, der Software-Fehler sehr gut findet und sauber berichtet (Schritte, Erwartung, Ist-Zustand). Er macht KEINE Sicherheits- oder Angriffstests und KEIN Glücksspiel.
 
-Was zählt (sei lieber großzügig als zu streng):
-- Bezahlung in Geld (PayPal, Überweisung, Stripe, USDT/USDC) ODER Gutscheine wie Amazon-Gutscheine ODER Krypto (USDC, USDT, aber auch andere Coins oder Token sind ausdrücklich in Ordnung). Auch Programme mit kleinen Beträgen sind interessant.
-- Funktions-, UI/UX- oder Textfehler werden belohnt. Grenzfälle trotzdem nennen und kurz sagen, was unklar ist.
-- Möglichst offen für alle, auch für Leute aus Deutschland ohne bezahltes Abo. Wenn ein kostenloses Konto nötig ist, ist das in Ordnung.
-- Möglichst aktuell laufend (Stand November 2026). Neue oder gerade angekündigte Aktionen sind besonders wertvoll, weil oft der erste Melder gewinnt.
+Was als Belohnung zählt (bitte großzügig sein, nicht pingelig):
+- Geld (PayPal, Überweisung, Stripe, Wise)
+- Gutscheine aller Art, besonders Amazon-Gutscheine, aber auch andere Gift Cards
+- Krypto: USDT, USDC, aber ausdrücklich auch andere Coins und Projekt-Token
+- Guthaben oder Credits nur, wenn sie einen klaren Geldwert haben
+Kleine Beträge (1 bis 20 Dollar je Fehler) sind ausdrücklich interessant. Grenzfälle trotzdem nennen und sagen, was unklar ist.
 
-Wo suchen: normale Websuche, aber auch Foren und Ankündigungen (Reddit, Hacker News, Indie Hackers, Product Hunt, X/Twitter, Discord-Ankündigungen), Hilfe-Center (Intercom, Zendesk, Help Scout, GitBook, Notion), AGB und Nutzungsbedingungen kleiner Firmen, Bug-Bash- und Beta-Aktionen, Krypto-Testnetze mit UI/UX-Prämien. Suche auch auf Deutsch, Französisch, Spanisch, Portugiesisch und Niederländisch (z. B. "Fehler melden Belohnung", "Bug melden Prämie", "prime bug", "recompensa por errores", "beloning bug melden").
+Wichtig: Nenne nur Dinge, die du in DIESER Suche auf einer echten Seite gefunden hast, mit direktem Link zu genau der Seite, auf der die Belohnung steht. Keine Startseiten, keine erfundenen Links. Wenn du nichts Neues findest, sag das ehrlich, aber versuche vorher mindestens 8 verschiedene Suchanfragen in mehreren Sprachen.
 
-Typ-Beispiele, die wir schon kennen und nutzen (bitte NICHT nochmal nennen): Enjyn, Too Lost, Omnisend Product Bugs & UX Bounty, Krios, Smackdab, WildFeed, Cyndra, KeyInventions, TsarChat, Kalshi, Topcoder, HackenProof, Tester Work, Beta Family, FirstUsers, BetaTesters, 72 Street, Visor, SnapDeploy, Xano, FarmRaise, Flux, WisherBag, TradingView, Qodo, WiKey, Binobi, Mural, Kagi, Akeyless, Scrap.io, Picky Assist, Binomo, VaultCraft, Xsolla, AURA, XXKK, Mushi Mushi, Pixelora, FlixSell, Protocall, TapQA, Kidpop, Remicals, Orkosi, QAProvider, BEAT, Winna, RapidSkins, Gift Club, Maigie. Keine Casinos oder Glücksspiel.
+Schon bekannt, bitte NICHT nennen: Enjyn, Too Lost, Omnisend, Krios, Smackdab, WildFeed, Cyndra, KeyInventions, TsarChat, Kalshi, Topcoder, HackenProof, Tester Work, Beta Family, FirstUsers, BetaTesters, 72 Street, Visor, SnapDeploy, Xano, FarmRaise, Flux, WisherBag, TradingView, Qodo, WiKey, Binobi, Mural, Kagi, Akeyless, Scrap.io, Picky Assist, Binomo, VaultCraft, Xsolla, AURA, XXKK, Mushi Mushi, Pixelora, FlixSell, Protocall, TapQA, Kidpop, Remicals, Orkosi, QAProvider, BEAT, Winna, RapidSkins, Gift Club, Maigie, Playoff Predictors, ShadiLink, Oyma, FocusStack, WISMO, CrawlBeast, Top10Q, SoulDub, MicroLanding, ImgAuth, FleetFlow, ListSquire, Pluspoint, ThumbnailMaker, Grid Command, Focusity, eSIMX, PicNext, Ema, Vivid Money. Ebenfalls weglassen: große Crowdtesting-Plattformen (uTest, Test IO, Testbirds, Testlio, Global App Testing, PlaytestCloud, UserTesting, Clickworker), reine Sicherheitsprogramme (HackerOne, Bugcrowd, Immunefi, Intigriti) und Casinos.
 
-Antworte als Liste, je Treffer:
-- Name
-- Direkter Link zur Seite mit den Regeln
-- Betrag je Fehler (oder Spanne) und Art der Belohnung
-- Wie gemeldet wird
-- Was unklar oder ein Haken ist
-- Datum der Seite oder der Ankündigung, falls erkennbar
+Antwort als Liste, je Treffer genau diese Zeilen:
+- Name:
+- Link (Seite mit der Belohnung):
+- Belohnung je Fehler (Betrag und Art):
+- Werden normale Funktions-/UI-Fehler belohnt? (ja/nein/unklar, mit kurzem Zitat von der Seite)
+- Wie wird gemeldet:
+- Haken / unklar:
+- Datum der Seite oder Ankündigung (falls erkennbar):
 
-Zum Schluss, getrennt davon: bis zu 3 andere, leicht übersehene Wege, wie jemand, der sehr gut Software-Fehler findet und sauber berichtet, ohne Sicherheitstests online Geld verdienen kann (mit Link als Beleg).
