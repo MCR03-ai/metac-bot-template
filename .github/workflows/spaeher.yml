@@ -6,7 +6,7 @@ permissions:
 jobs:
   spaeher:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - name: Spaeher laufen lassen
